@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {
         printf("[*] You must provide an action.");
+        return 1;
     }
 
     // Get the command for the program
@@ -37,12 +39,12 @@ int main(int argc, char *argv[]) {
 
         // See if file opened successfully
         if (file == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n"); 
             return 1;
         }
 
         // Add newline
-        strncat(contents, "\n", sizeof(contents) - strlen(contents));
+        strncat(contents, "\n", sizeof(contents) - strlen(contents) - 1);
 
         // Write the new todo item
         fprintf(file, "%s", contents);
@@ -57,7 +59,7 @@ int main(int argc, char *argv[]) {
 
         // See if file opened successfully
         if (file == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n");
             return 1;
         }
 
@@ -75,9 +77,11 @@ int main(int argc, char *argv[]) {
         // Check arg numbers
         if (argc <= 2) {
             printf("[*] You must specify an item to mark as done.");
+            return 1;
         }
 
-        int targetline = atoi(argv[2]); 
+        int targetlineNum = atoi(argv[2]);
+        bool compareNum = targetlineNum > 0;
         int current_line = 1;
         char buffer[1024]; // Max line length
 
@@ -86,7 +90,7 @@ int main(int argc, char *argv[]) {
 
         // See if file opened successfully
         if (src == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n");
             return 1;
         }
 
@@ -95,16 +99,25 @@ int main(int argc, char *argv[]) {
 
         // See if file opened successfully
         if (temp == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n");
             return 1;
         }
 
         // Read file line by line
         while (fgets(buffer, sizeof(buffer), src)  != NULL) {
-            // Check if correct line and cross it off
-            if (current_line == targetline) {
-                if (strlen(buffer) >= 2 && buffer[1] != '\n') {
-                    buffer[1] ='X';
+            // Check for crossing of by task string or by line num
+            if (compareNum) {
+                // Check if correct line and cross it off
+                if (current_line == targetlineNum) {
+                    if (strlen(buffer) >= 2 && buffer[1] != '\n') {
+                        buffer[1] ='X';
+                    }
+                }
+            } else {
+                if (strstr(buffer, argv[2]) != NULL) {
+                    if (strlen(buffer) >= 2 && buffer[1] != '\n') {
+                        buffer[1] ='X';
+                    }
                 }
             }
 
@@ -136,7 +149,7 @@ int main(int argc, char *argv[]) {
 
         // See if file opened successfully
         if (file == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n");
             return 1;
         }
 
@@ -148,9 +161,11 @@ int main(int argc, char *argv[]) {
         // Check arg numbers
         if (argc <= 2) {
             printf("[*] You must specify an item to remove.");
+            return 1;
         }
 
-        int targetline = atoi(argv[2]); 
+        int targetlineNum = atoi(argv[2]); 
+        bool compareNum = targetlineNum > 0;
         int current_line = 1;
         char buffer[1024]; // Max line length
 
@@ -159,7 +174,7 @@ int main(int argc, char *argv[]) {
 
         // See if file opened successfully
         if (src == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n");
             return 1;
         }
 
@@ -168,15 +183,22 @@ int main(int argc, char *argv[]) {
 
         // See if file opened successfully
         if (temp == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n");
             return 1;
         }
 
         // Read file line by line
         while (fgets(buffer, sizeof(buffer), src)  != NULL) {
-            if (current_line != targetline) {
-                fputs(buffer, temp);
+            if (compareNum) {
+                if (current_line != targetlineNum) {
+                    fputs(buffer, temp);
+                }    
+            } else {
+                if (strstr(buffer, argv[2]) == NULL) {
+                    fputs(buffer, temp);
+                }
             }
+            current_line++;
         }
 
         // Close the files
@@ -199,6 +221,7 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(cmd, "export") == 0) {
         if (argc <= 2) {
             printf("[*] You must specify a name for the file.");
+            return 1;
         }
         
         if (rename("list.txt", argv[2]) != 0) {
@@ -210,6 +233,7 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(cmd, "import") == 0) {
         if (argc <= 2) {
             printf("[*] You must specify the of the file.");
+            return 1;
         }
         
         if (rename(argv[2], "list.txt") != 0) {
@@ -222,7 +246,7 @@ int main(int argc, char *argv[]) {
         FILE *file = fopen("list.txt", "r");
         
         if (file == NULL) {
-            printf("[*] Erroring opening the todo file\n");
+            printf("[*] Error opening the todo file\n");
             return 1;
         }
 
@@ -251,9 +275,9 @@ int main(int argc, char *argv[]) {
         printf("Available commands:\n");
         printf("    todo add <task to add> (Adds the task to the todo list)\n");
         printf("    todo list (Lists all the files in the task)\n");
-        printf("    todo done <line number of item> (Marks an item as done)\n");
+        printf("    todo done <line number of item or item name in quotes> (Marks an item as done)\n");
         printf("    todo clear (Clears the entire list)\n");
-        printf("    todo delete <line number of item> (Deletes the task based on it's #)\n");
+        printf("    todo delete <line number of item or item name in quotes> (Deletes the task based on it's #)\n");
         printf("    todo export <filename> (Exports the list)\n");
         printf("    todo import <filename> (Imports a file)\n");
         printf("    todo total (Prints the total amount of tasks)\n");
